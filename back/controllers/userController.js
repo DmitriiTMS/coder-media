@@ -78,7 +78,45 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    console.log("auth");
+    const { id } = req.params;
+    const user = await Users.findOne({
+      where: {
+        id,
+      },
+      include: "products",
+    });
+
+    if (!user) return res.status(404).json({ msg: "Пользователь не найден" });
+
+    const { name, password, confirmPassword, role } = req.body;
+
+    let hashPassword;
+    if (password === "" || password === null) {
+      hashPassword = user.password;
+    } else {
+      hashPassword = await argon2.hash(password);
+    }
+
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ msg: "Password не равен ConfirmPsssword обновление" });
+    }
+
+    await Users.update(
+      {
+        name,
+        password: hashPassword,
+        role,
+      },
+      {
+        where: {
+          id: user.id,
+        },
+      }
+    );
+
+    return res.status(200).json({ msg: "Пользователь обновлён" });
   } catch (error) {
     console.log(error);
   }
@@ -86,7 +124,22 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-    console.log("auth");
+    const { id } = req.params;
+    const user = await Users.findOne({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) return res.status(404).json({ msg: "Пользователь не найден" });
+
+    await Users.destroy({
+      where: {
+        id: user.id,
+      },
+    });
+
+    return res.status(200).json({ msg: "Пользователь удалён" });
   } catch (error) {
     console.log(error);
   }
